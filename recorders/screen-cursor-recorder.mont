@@ -1,0 +1,281 @@
+mont 3
+
+recorder ScreenCursorRecorder {
+  id: Text = "screenCursor";
+  title: Text = "Screen and cursor recorder";
+  widgets: List<Widget> = [
+    {
+      id: "recording",
+      placement: { side: "bottom", align: "center" },
+      sourceTsx: "export default defineSpanScene({ widgets: [{ id: 'recording', placement: { side: 'bottom', align: 'center' }, render: ({ recording }) => <Row gap={8}><AudioLevel role='microphone' label='Sound level' /><Button icon={recording.canStop ? 'stop' : 'record'} label={recording.canStop ? 'Stop recording' : recording.canStart ? 'Start recording' : recording.canRetry ? 'Retry recording' : recording.lifecycle === 'finalizing' || recording.lifecycle === 'stopping' ? 'Finalizing recording' : recording.lifecycle === 'preparing' ? 'Preparing recording' : 'Prepare recording'} trigger={recording.canStop ? 'recorder.stop' : recording.canStart ? 'recorder.start' : recording.canRetry ? 'recorder.retry' : 'recorder.prepare'} disabled={!recording.canStop && !recording.canStart && !recording.canRetry && !recording.canPrepare} /></Row> }] });"
+    }
+  ];
+  hostCapabilities: List<RecorderHostCapability> = [
+    { capabilityId: "microphoneCapture", minimumVersion: 1 },
+    { capabilityId: "displayCapture", minimumVersion: 1 },
+    { capabilityId: "cursorSuppression", minimumVersion: 1 },
+    { capabilityId: "cursorTelemetry", minimumVersion: 1 }
+  ];
+  settings: List<RecorderSetting> = [
+    {
+      settingId: "microphoneSource",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: source, sourceKind: "microphone", maxOptions: 32 },
+      defaultValue: "default"
+    },
+    {
+      settingId: "displaySource",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: source, sourceKind: "display", maxOptions: 32 },
+      defaultValue: "display:default"
+    },
+    {
+      settingId: "captureDevice",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: device, deviceKind: "display", maxOptions: 32 },
+      defaultValue: "display:default"
+    },
+    {
+      settingId: "permissionStatus",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: choice, options: ["prompt", "granted", "denied"] },
+      defaultValue: "prompt"
+    },
+    {
+      settingId: "videoCodec",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: choice, options: ["h264"] },
+      defaultValue: "h264"
+    },
+    {
+      settingId: "cursorSuppressed",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: toggle },
+      defaultValue: true
+    },
+    { settingId: "followCursor", lifetime: finalizedKeyframeable, control: { kind: toggle }, defaultValue: true },
+    { settingId: "followSmoothingMs", lifetime: finalizedKeyframeable, control: { kind: numberRange, minimum: 0, maximum: 600, step: 10 }, defaultValue: 180 },
+    { settingId: "cursorScale", lifetime: finalizedKeyframeable, control: { kind: numberRange, minimum: 0.5, maximum: 3, step: 0.1 }, defaultValue: 1 },
+    { settingId: "cursorSmoothingMs", lifetime: finalizedKeyframeable, control: { kind: numberRange, minimum: 0, maximum: 300, step: 10 }, defaultValue: 40 },
+    { settingId: "cursorTilt", lifetime: finalizedKeyframeable, control: { kind: numberRange, minimum: 0, maximum: 30, step: 1 }, defaultValue: 0 },
+    { settingId: "cursorVisible", lifetime: finalizedKeyframeable, control: { kind: toggle }, defaultValue: true },
+    { settingId: "cursorAutoShape", lifetime: finalizedKeyframeable, control: { kind: toggle }, defaultValue: true },
+    { settingId: "cursorClickAnimation", lifetime: finalizedKeyframeable, control: { kind: toggle }, defaultValue: true },
+    { settingId: "colorFill", lifetime: finalizedKeyframeable, control: { kind: text, maxLength: 9 }, defaultValue: "" },
+    { settingId: "colorAccent", lifetime: finalizedKeyframeable, control: { kind: text, maxLength: 9 }, defaultValue: "" },
+    {
+      settingId: "zoom",
+      lifetime: finalizedKeyframeable,
+      control: { kind: numberRange, minimum: 1, maximum: 8, step: 0.05 },
+      defaultValue: 1.2
+    },
+    {
+      settingId: "cursorAsset",
+      lifetime: finalizedKeyframeable,
+      control: { kind: asset, assetKind: "cursor", maxOptions: 64 },
+      defaultValue: "video.mont.studio"
+    },
+    {
+      settingId: "cursorMotionBlur",
+      lifetime: finalizedKeyframeable,
+      control: { kind: numberRange, minimum: 0, maximum: 1, step: 0.01 },
+      defaultValue: 0.5
+    }
+  ];
+  presets cursorMotion "Motion" {
+    preset raw "Raw" { cursorSmoothingMs: 0, cursorMotionBlur: 0, cursorTilt: 0 }
+    preset smooth "Smooth" { cursorSmoothingMs: 40, cursorMotionBlur: 0, cursorTilt: 0 }
+    preset cinematic "Cinematic" { cursorSmoothingMs: 80, cursorMotionBlur: 0.5, cursorTilt: 8 }
+  }
+  panel sound "Sound" {
+    icon: "audio"
+    input microphoneSource using textInput { icon: "audio" }
+  }
+
+  panel screenRecording "Screen recording" {
+    icon: "screen"
+    scroll {
+      section capture "Capture" {
+        input displaySource using textInput { icon: "source" }
+        input captureDevice using textInput { icon: "device" }
+        input permissionStatus using select { icon: "settings" }
+        input videoCodec using select { icon: "video" }
+      }
+      section motion "Zoom and follow" {
+        input zoom using slider { icon: "size" }
+        input followCursor using toggle { icon: "position" }
+        input followSmoothingMs using slider { icon: "effect" }
+      }
+    }
+  }
+  panel cursor "Cursor" {
+    icon: "position"
+    scroll {
+      section appearance "Appearance" {
+        input cursorAsset using assetPicker { icon: "image" }
+        input cursorScale using slider { icon: "size" }
+        input cursorVisible using toggle { icon: "opacity" }
+        input cursorAutoShape using toggle { icon: "position" }
+        input cursorClickAnimation using toggle { icon: "effect" }
+        input cursorSuppressed using toggle { icon: "settings" }
+      }
+      section colorFill "Color fill" {
+        input colorFill using textInput { icon: "palette" }
+      }
+      section colorAccent "Color accent" {
+        input colorAccent using textInput { icon: "palette" }
+      }
+      section movement "Movement" {
+        presetMenu cursorMotion { icon: "presets" }
+        input cursorSmoothingMs using slider { icon: "effect" }
+        input cursorTilt using slider { icon: "effect" }
+      }
+      section motionBlur "Motion blur" {
+        input cursorMotionBlur using slider { icon: "effect" }
+      }
+    }
+  }
+
+  presentationBindings: List<RecorderPresentationBinding> = [
+    { settingId: "followCursor", target: { kind: "scene-variable", name: "followCursor" } },
+    { settingId: "followSmoothingMs", target: { kind: "scene-variable", name: "followSmoothingMs" } },
+    { settingId: "cursorScale", target: { kind: "scene-variable", name: "cursorScale" } },
+    { settingId: "cursorSmoothingMs", target: { kind: "scene-variable", name: "cursorSmoothingMs" } },
+    { settingId: "cursorTilt", target: { kind: "scene-variable", name: "cursorTilt" } },
+    { settingId: "cursorVisible", target: { kind: "scene-variable", name: "cursorVisible" } },
+    { settingId: "cursorAutoShape", target: { kind: "scene-variable", name: "cursorAutoShape" } },
+    { settingId: "cursorClickAnimation", target: { kind: "scene-variable", name: "cursorClickAnimation" } },
+    { settingId: "cursorAsset", target: { kind: "output-setting", role: "cursor", settingId: "cursorAsset" } },
+    { settingId: "cursorMotionBlur", target: { kind: "output-setting", role: "cursor", settingId: "cursorMotionBlur" } },
+    { settingId: "colorFill", target: { kind: "scene-variable", name: "colorFill" } },
+    { settingId: "colorAccent", target: { kind: "scene-variable", name: "colorAccent" } }
+  ];
+
+  outputs: List<RecorderOutput> = [
+    {
+      role: "microphone",
+      producer: {
+        capabilityId: "microphoneCapture",
+        capabilityVersion: 1,
+        valueKind: encodedChunk,
+        channelId: "audio",
+        sourceSetting: "microphoneSource"
+      },
+      track: audio,
+      required: true,
+      resource: {
+        channels: [
+          {
+            channelId: "audio",
+            kind: encodedAudio,
+            contentType: "audio/mp4",
+            ticksPerSecond: 48000,
+            maxChunkDurationTicks: 96000,
+            maxChunkBytes: 2097152
+          }
+        ],
+        maxStagingBytes: 16777216,
+        maxChunksInFlight: 8
+      },
+      finalizedSpan: {
+        spanType: audio,
+        capabilityKind: "programmatic.scene",
+        capabilityVersion: 1,
+        bindingKind: source,
+        bindingKey: "microphone",
+        defaultPresentation: {}
+      },
+      relativeRow: 1,
+      relativeLayer: 0,
+      preview: audioLevel
+    },
+    {
+      role: "footage",
+      producer: {
+        capabilityId: "displayCapture",
+        capabilityVersion: 1,
+        valueKind: encodedChunk,
+        channelId: "video",
+        sourceSetting: "displaySource"
+      },
+      track: visual,
+      required: true,
+      resource: {
+        channels: [
+          {
+            channelId: "video",
+            kind: encodedVideo,
+            contentType: "video/mp4",
+            ticksPerSecond: 1000000,
+            maxChunkDurationTicks: 2000000,
+            maxChunkBytes: 4194304
+          }
+        ],
+        maxStagingBytes: 67108864,
+        maxChunksInFlight: 8
+      },
+      finalizedSpan: {
+        spanType: visual,
+        capabilityKind: "programmatic.scene",
+        capabilityVersion: 1,
+        staticState: {
+          composition: "{\"roles\":{\"screen\":{\"nodeId\":\"screen-viewport\",\"sourceBindingKey\":\"media\",\"cursorSourceBindingKey\":\"recording\",\"zoomVariable\":\"mediaZoom\",\"followCursorVariable\":\"followCursor\",\"followSmoothingVariable\":\"followSmoothingMs\",\"cursorXVariable\":\"cursorX\",\"cursorYVariable\":\"cursorY\"}},\"bindings\":{\"signals.cursor.x\":{\"computed\":\"compositionCursorX\"},\"signals.cursor.y\":{\"computed\":\"compositionCursorY\"}}}",
+          sourceTsx: "export default defineSpanScene({ id: 'recorded-screen-cursor', width: 1920, height: 1080, durationMs: 1000, variables: { previewActive: booleanVar(false), microphoneSource: stringVar('host-frame:microphone'), microphoneDurationMs: numberVar(1000), mediaSource: stringVar('host-frame:media'), mediaDurationMs: numberVar(1000), sourceStartMs: numberVar(0), sourceEndMs: numberVar(1000), playbackRate: numberVar(1), volume: numberVar(1), mediaSourceWidth: numberVar(1920), mediaSourceHeight: numberVar(1080), mediaZoom: numberVar(1.2), recordingSourceWidth: numberVar(1920), recordingSourceHeight: numberVar(1080), recordingDurationMs: numberVar(1000), recordingVisible: booleanVar(true), recordingCursorAsset: stringVar('video.mont.studio'), recordingCursorMotionBlur: numberVar(0.5), cursorX: numberVar(0), cursorY: numberVar(0), followCursor: booleanVar(true), followSmoothingMs: numberVar(180), cursorScale: numberVar(1), cursorSmoothingMs: numberVar(40), cursorTilt: numberVar(0), cursorVisible: booleanVar(true), cursorPressed: numberVar(0), cursorShape: numberVar(0), cursorInCapture: numberVar(1), cursorAutoShape: booleanVar(true), cursorClickAnimation: booleanVar(true), colorFill: stringVar(''), colorAccent: stringVar('') }, computeds: { sourceWidth: computed.number(() => vars.recordingSourceWidth > 0 ? vars.recordingSourceWidth : vars.mediaSourceWidth), sourceHeight: computed.number(() => vars.recordingSourceHeight > 0 ? vars.recordingSourceHeight : vars.mediaSourceHeight), compositionCursorX: computed.number(() => vars.cursorX * vars.mediaSourceWidth / Math.max(computed.sourceWidth, 1)), compositionCursorY: computed.number(() => vars.cursorY * vars.mediaSourceHeight / Math.max(computed.sourceHeight, 1)) }, render({ vars }) { return (<Scene><Mask.Rect id='screen-viewport' x={0} y={0} width={vars.mediaSourceWidth} height={vars.mediaSourceHeight}><Video id='media' src={vars.mediaSource} sourceStartMs={vars.sourceStartMs} sourceEndMs={vars.previewActive ? null : (vars.sourceEndMs < vars.mediaDurationMs ? vars.sourceEndMs : vars.mediaDurationMs)} durationMs={vars.previewActive ? null : ((vars.sourceEndMs < vars.mediaDurationMs ? vars.sourceEndMs : vars.mediaDurationMs) > vars.sourceStartMs ? ((vars.sourceEndMs < vars.mediaDurationMs ? vars.sourceEndMs : vars.mediaDurationMs) - vars.sourceStartMs) / vars.playbackRate : 0)} playbackRate={vars.playbackRate} volume={vars.volume} x={0} y={0} width={vars.mediaSourceWidth} height={vars.mediaSourceHeight} fit='contain' /><Group id='recording' visible={vars.recordingVisible} durationMs={vars.previewActive ? null : ((vars.sourceEndMs < vars.recordingDurationMs ? vars.sourceEndMs : vars.recordingDurationMs) > vars.sourceStartMs ? ((vars.sourceEndMs < vars.recordingDurationMs ? vars.sourceEndMs : vars.recordingDurationMs) - vars.sourceStartMs) / vars.playbackRate : 0)} x={0} y={0} width={vars.mediaSourceWidth} height={vars.mediaSourceHeight}><Group id='cursor-source' x={0} y={0} width={computed.sourceWidth} height={computed.sourceHeight} scaleX={vars.mediaSourceWidth / computed.sourceWidth} scaleY={vars.mediaSourceHeight / computed.sourceHeight} pivotX={0} pivotY={0}><AssetScene id='recorded-cursor' asset={vars.recordingCursorAsset} x={0} y={0} inputs={{ previewActive: vars.previewActive, cursorX: vars.cursorX, cursorY: vars.cursorY, cursorPressed: vars.cursorPressed, cursorShape: vars.cursorShape, cursorScale: vars.cursorScale, cursorVisible: vars.cursorVisible && vars.cursorInCapture > 0.5, cursorAutoShape: vars.cursorAutoShape, cursorClickAnimation: vars.cursorClickAnimation, cursorMotionBlur: vars.recordingCursorMotionBlur, cursorTilt: vars.cursorTilt, cursorSmoothingMs: vars.cursorSmoothingMs, viewportWidth: computed.sourceWidth, viewportHeight: computed.sourceHeight, colorFill: vars.colorFill, colorAccent: vars.colorAccent }} /></Group></Group></Mask.Rect><Audio><AudioTrack id='microphone' trackId='microphone'><AudioClip id='microphone' src={vars.microphoneSource} startMs={0} sourceStartMs={vars.sourceStartMs} sourceEndMs={vars.previewActive ? null : (vars.sourceEndMs < vars.microphoneDurationMs ? vars.sourceEndMs : vars.microphoneDurationMs)} durationMs={vars.previewActive ? null : ((vars.sourceEndMs < vars.microphoneDurationMs ? vars.sourceEndMs : vars.microphoneDurationMs) > vars.sourceStartMs ? ((vars.sourceEndMs < vars.microphoneDurationMs ? vars.sourceEndMs : vars.microphoneDurationMs) - vars.sourceStartMs) / vars.playbackRate : 0)} playbackRate={vars.playbackRate} volume={vars.volume} /></AudioTrack></Audio></Scene>); } });"
+        },
+        bindingKind: source,
+        bindingKey: "media",
+        defaultPresentation: { zoom: 1.2 }
+      },
+      relativeRow: 0,
+      relativeLayer: 0,
+      preview: sceneFrame
+    },
+    {
+      role: "cursor",
+      heldTemporalChannels: { cursorPressed: 0, cursorShape: 0, cursorInCapture: 1 },
+      producer: {
+        capabilityId: "cursorTelemetry",
+        capabilityVersion: 1,
+        valueKind: temporalEventBatch,
+        channelId: "cursor",
+        sourceRole: "footage"
+      },
+      track: visual,
+      required: true,
+      resource: {
+        channels: [
+          {
+            channelId: "cursor",
+            kind: temporalEvents,
+            contentType: "application/vnd.mont.temporal-events+binary",
+            ticksPerSecond: 1000000,
+            maxChunkDurationTicks: 2000000,
+            maxChunkBytes: 8388608
+          }
+        ],
+        maxStagingBytes: 8388608,
+        maxChunksInFlight: 8
+      },
+      finalizedSpan: {
+        spanType: visual,
+        capabilityKind: "programmatic.scene",
+        capabilityVersion: 1,
+        bindingKind: source,
+        bindingKey: "recording",
+        defaultPresentation: {
+          zoom: 1,
+          cursorAsset: "video.mont.studio",
+          cursorMotionBlur: 0.5
+        }
+      },
+      relativeRow: -1,
+      relativeLayer: 1,
+      preview: sceneEvents
+    }
+  ];
+  placement: RecorderPlacementPolicy = {
+    occupiedInterval: push,
+    onCancel: keepRetryable,
+    onTerminalFailure: keepRetryable
+  };
+}
