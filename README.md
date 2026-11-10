@@ -4,6 +4,7 @@ Client-neutral recorder definitions for Mont SDK hosts. Capture, permissions, fi
 
 - `recorders/camera-screen-cursor-recorder.mont`: screen, camera, microphone, and cursor capture.
 - `recorders/screen-cursor-recorder.mont`: screen, microphone, and cursor capture.
+- `recorders/camera-recorder.mont`: camera and microphone capture.
 
 Reproducible synthetic examples and rendered previews live in [usemont/workflows](https://github.com/usemont/workflows#tools). Examples pin these definitions by commit and SHA-256; they do not open capture devices.
 

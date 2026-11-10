@@ -1,0 +1,153 @@
+mont 3
+
+recorder CameraRecorder {
+  id: Text = "camera";
+  title: Text = "Full-screen camera recorder";
+  widgets: List<Widget> = [
+    {
+      id: "recording",
+      placement: { side: "bottom", align: "center" },
+      sourceTsx: "export default defineSpanScene({ widgets: [{ id: 'recording', placement: { side: 'bottom', align: 'center' }, render: ({ recording }) => <Row gap={8}><AudioLevel role='microphone' label='Sound level' /><Button icon={recording.canStop ? 'stop' : 'record'} label={recording.canStop ? 'Stop recording' : recording.canStart ? 'Start recording' : recording.canRetry ? 'Retry recording' : recording.lifecycle === 'finalizing' || recording.lifecycle === 'stopping' ? 'Finalizing recording' : recording.lifecycle === 'preparing' ? 'Preparing recording' : 'Prepare recording'} trigger={recording.canStop ? 'recorder.stop' : recording.canStart ? 'recorder.start' : recording.canRetry ? 'recorder.retry' : 'recorder.prepare'} disabled={!recording.canStop && !recording.canStart && !recording.canRetry && !recording.canPrepare} /></Row> }] });"
+    }
+  ];
+  hostCapabilities: List<RecorderHostCapability> = [
+    { capabilityId: "microphoneCapture", minimumVersion: 1 },
+    { capabilityId: "cameraCapture", minimumVersion: 1 }
+  ];
+  settings: List<RecorderSetting> = [
+    {
+      settingId: "microphoneSource",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: source, sourceKind: "microphone", maxOptions: 32 },
+      defaultValue: "default"
+    },
+    {
+      settingId: "cameraSource",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: source, sourceKind: "camera", maxOptions: 32 },
+      defaultValue: "default"
+    },
+    {
+      settingId: "captureDevice",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: device, deviceKind: "camera", maxOptions: 32 },
+      defaultValue: "default"
+    },
+    {
+      settingId: "permissionStatus",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: choice, options: ["prompt", "granted", "denied"] },
+      defaultValue: "prompt"
+    },
+    {
+      settingId: "videoCodec",
+      lifetime: sessionFrozenProvenance,
+      control: { kind: choice, options: ["h264"] },
+      defaultValue: "h264"
+    }
+  ];
+
+
+  panel sound "Sound" {
+    icon: "audio"
+    input microphoneSource using textInput { icon: "audio" }
+  }
+
+  panel cameraRecording "Camera recording" {
+    icon: "camera"
+    scroll {
+      section capture "Capture" {
+        input cameraSource using textInput { icon: "source" }
+        input captureDevice using textInput { icon: "device" }
+        input permissionStatus using select { icon: "settings" }
+        input videoCodec using select { icon: "video" }
+      }
+    }
+  }
+
+  outputs: List<RecorderOutput> = [
+    {
+      role: "microphone",
+      producer: {
+        capabilityId: "microphoneCapture",
+        capabilityVersion: 1,
+        valueKind: encodedChunk,
+        channelId: "audio",
+        sourceSetting: "microphoneSource"
+      },
+      track: audio,
+      required: true,
+      resource: {
+        channels: [
+          {
+            channelId: "audio",
+            kind: encodedAudio,
+            contentType: "audio/mp4",
+            ticksPerSecond: 48000,
+            maxChunkDurationTicks: 96000,
+            maxChunkBytes: 2097152
+          }
+        ],
+        maxStagingBytes: 16777216,
+        maxChunksInFlight: 8
+      },
+      finalizedSpan: {
+        spanType: audio,
+        capabilityKind: "programmatic.scene",
+        capabilityVersion: 1,
+        bindingKind: source,
+        bindingKey: "microphone",
+        defaultPresentation: {}
+      },
+      relativeRow: 1,
+      relativeLayer: 0,
+      preview: audioLevel
+    },
+    {
+      role: "camera",
+      producer: {
+        capabilityId: "cameraCapture",
+        capabilityVersion: 1,
+        valueKind: encodedChunk,
+        channelId: "video",
+        sourceSetting: "cameraSource"
+      },
+      track: visual,
+      required: true,
+      resource: {
+        channels: [
+          {
+            channelId: "video",
+            kind: encodedVideo,
+            contentType: "video/mp4",
+            ticksPerSecond: 1000000,
+            maxChunkDurationTicks: 2000000,
+            maxChunkBytes: 4194304
+          }
+        ],
+        maxStagingBytes: 67108864,
+        maxChunksInFlight: 8
+      },
+      finalizedSpan: {
+        spanType: visual,
+        capabilityKind: "programmatic.scene",
+        capabilityVersion: 1,
+        bindingKind: source,
+        staticState: {
+          composition: "{\"roles\":{\"camera\":{\"nodeId\":\"media\",\"sourceBindingKey\":\"media\"}}}",
+          sourceTsx: "export default defineSpanScene({ id: 'recorded-camera', width: 1920, height: 1080, durationMs: 1000, variables: { previewActive: booleanVar(false), microphoneSource: stringVar('host-frame:microphone'), microphoneDurationMs: numberVar(1000), mediaSource: stringVar('host-frame:media'), mediaDurationMs: numberVar(1000), sourceStartMs: numberVar(0), sourceEndMs: numberVar(1000), playbackRate: numberVar(1), volume: numberVar(1), mediaSourceWidth: numberVar(1920), mediaSourceHeight: numberVar(1080) }, render({ vars }) { return (<Scene><Video id='media' src={vars.mediaSource} sourceStartMs={vars.sourceStartMs} sourceEndMs={vars.previewActive ? null : (vars.sourceEndMs < vars.mediaDurationMs ? vars.sourceEndMs : vars.mediaDurationMs)} durationMs={vars.previewActive ? null : ((vars.sourceEndMs < vars.mediaDurationMs ? vars.sourceEndMs : vars.mediaDurationMs) > vars.sourceStartMs ? ((vars.sourceEndMs < vars.mediaDurationMs ? vars.sourceEndMs : vars.mediaDurationMs) - vars.sourceStartMs) / vars.playbackRate : 0)} playbackRate={vars.playbackRate} volume={vars.volume} x={0} y={0} width={vars.mediaSourceWidth} height={vars.mediaSourceHeight} fit='contain' /><Audio><AudioTrack id='microphone' trackId='microphone'><AudioClip id='microphone' src={vars.microphoneSource} startMs={0} sourceStartMs={vars.sourceStartMs} sourceEndMs={vars.previewActive ? null : (vars.sourceEndMs < vars.microphoneDurationMs ? vars.sourceEndMs : vars.microphoneDurationMs)} durationMs={vars.previewActive ? null : ((vars.sourceEndMs < vars.microphoneDurationMs ? vars.sourceEndMs : vars.microphoneDurationMs) > vars.sourceStartMs ? ((vars.sourceEndMs < vars.microphoneDurationMs ? vars.sourceEndMs : vars.microphoneDurationMs) - vars.sourceStartMs) / vars.playbackRate : 0)} playbackRate={vars.playbackRate} volume={vars.volume} /></AudioTrack></Audio></Scene>); } });"
+        },
+        bindingKey: "media",
+        defaultPresentation: {}
+      },
+      relativeRow: 0,
+      relativeLayer: 0,
+      preview: sceneFrame
+    }
+  ];
+  placement: RecorderPlacementPolicy = {
+    occupiedInterval: push,
+    onCancel: keepRetryable,
+    onTerminalFailure: keepRetryable
+  };
+}
